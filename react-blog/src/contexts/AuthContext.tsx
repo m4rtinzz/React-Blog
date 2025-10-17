@@ -1,8 +1,14 @@
 import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 
+interface User {
+    id: number;
+    username: string;
+}
+
 interface AuthContextType {
-    isAuthenticated: boolean;
-    login: (user: string, pass: string) => Promise<boolean>;
+    currentUser: User | null;
+    isAuthenticated: boolean; // Manter para facilidade de uso
+    login: (username: string, pass: string) => Promise<boolean>;
     logout: () => void;
 }
 
@@ -10,14 +16,24 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-        return localStorage.getItem('isAuthenticated') === 'true';
+        return localStorage.getItem('blog_user') !== null;
+    });
+    const [currentUser, setCurrentUser] = useState<User | null>(() => {
+        const storedUser = localStorage.getItem('blog_user');
+        return storedUser ? JSON.parse(storedUser) : null;
     });
 
     useEffect(() => {
-        localStorage.setItem('isAuthenticated', String(isAuthenticated));
-    }, [isAuthenticated]);
+        if (currentUser) {
+            localStorage.setItem('blog_user', JSON.stringify(currentUser));
+            setIsAuthenticated(true);
+        } else {
+            localStorage.removeItem('blog_user');
+            setIsAuthenticated(false);
+        }
+    }, [currentUser]);
 
-    const login = async (user: string, pass: string): Promise<boolean> => {
+    const login = async (username: string, pass: string): Promise<boolean> => {
         // Simulação: validamos o username contra a API e usamos uma senha fixa ('password').
         if (pass !== 'password') {
             return false;
@@ -29,12 +45,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 console.error('Falha ao buscar usuários da API');
                 return false;
             }
-            const users: { username: string }[] = await response.json();
+            const users: User[] = await response.json();
             
-            const foundUser = users.find(apiUser => apiUser.username === user);
+            const foundUser = users.find(apiUser => apiUser.username === username);
 
             if (foundUser) {
-                setIsAuthenticated(true);
+                setCurrentUser({ id: foundUser.id, username: foundUser.username });
                 return true;
             }
         } catch (error) {
@@ -44,11 +60,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const logout = () => {
-        setIsAuthenticated(false);
+        setCurrentUser(null);
     };
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+        <AuthContext.Provider value={{ currentUser, isAuthenticated, login, logout }}>
             {children}
         </AuthContext.Provider>
     );

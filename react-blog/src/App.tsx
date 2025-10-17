@@ -18,6 +18,8 @@ import AuthorPosts from './routes/AuthorPosts';
 import Login from './routes/Login';
 import Dashboard from './routes/Dashboard';
 import ProtectedRoute from './routes/ProtectedRoute';
+import NewPost from './routes/NewPost';
+import EditPost from './routes/EditPost';
 
 // 1. Layout principal da aplicação
 const AppLayout = () => {
@@ -75,7 +77,7 @@ export const authorPostsLoader = async ({ params }: LoaderFunctionArgs) => {
   return { author, posts };
 };
 
-// 4. Action para criar um novo comentário
+// Actions
 export const commentAction = async ({ request, params }: LoaderFunctionArgs) => {
   const formData = await request.formData();
   const comment = {
@@ -98,7 +100,65 @@ export const commentAction = async ({ request, params }: LoaderFunctionArgs) => 
   return redirect(`/blog/${params.id}`); // Redireciona para a mesma página para ver o resultado (simulado)
 };
 
-// 3. Definição centralizada das rotas
+export const dashboardLoader = async () => {
+  const user = JSON.parse(localStorage.getItem('blog_user') || 'null');
+  if (!user) return redirect('/login');
+
+  const response = await fetch(`https://jsonplaceholder.typicode.com/users/${user.id}/posts`);
+  if (!response.ok) throw new Error('Falha ao buscar seus posts.');
+  return response.json();
+};
+
+export const createPostAction = async ({ request }: LoaderFunctionArgs) => {
+  const user = JSON.parse(localStorage.getItem('blog_user') || 'null');
+  if (!user) return redirect('/login');
+
+  const formData = await request.formData();
+  const post = {
+    title: formData.get('title'),
+    body: formData.get('body'),
+    userId: user.id,
+  };
+
+  await fetch('https://jsonplaceholder.typicode.com/posts', {
+    method: 'POST',
+    body: JSON.stringify(post),
+    headers: { 'Content-type': 'application/json; charset=UTF-8' },
+  });
+
+  return redirect('/dashboard');
+};
+
+export const editPostLoader = async ({ params }: LoaderFunctionArgs) => {
+  const response = await fetch(`https://jsonplaceholder.typicode.com/posts/${params.postId}`);
+  if (!response.ok) throw new Error('Post não encontrado.');
+  return response.json();
+};
+
+export const editPostAction = async ({ request, params }: LoaderFunctionArgs) => {
+  const formData = await request.formData();
+  const updatedPost = {
+    title: formData.get('title'),
+    body: formData.get('body'),
+  };
+
+  await fetch(`https://jsonplaceholder.typicode.com/posts/${params.postId}`, {
+    method: 'PUT',
+    body: JSON.stringify(updatedPost),
+    headers: { 'Content-type': 'application/json; charset=UTF-8' },
+  });
+
+  return redirect('/dashboard');
+};
+
+export const deletePostAction = async ({ params }: LoaderFunctionArgs) => {
+  await fetch(`https://jsonplaceholder.typicode.com/posts/${params.postId}`, {
+    method: 'DELETE',
+  });
+  return redirect('/dashboard');
+};
+
+// Definição centralizada das rotas
 const router = createBrowserRouter([
   {
     path: '/',
@@ -132,7 +192,23 @@ const router = createBrowserRouter([
       },
       {
         path: 'dashboard',
-        element: <ProtectedRoute><Dashboard /></ProtectedRoute>
+        element: <ProtectedRoute><Dashboard /></ProtectedRoute>,
+        loader: dashboardLoader,
+      },
+      {
+        path: 'dashboard/new',
+        element: <ProtectedRoute><NewPost /></ProtectedRoute>,
+        action: createPostAction,
+      },
+      {
+        path: 'dashboard/edit/:postId',
+        element: <ProtectedRoute><EditPost /></ProtectedRoute>,
+        loader: editPostLoader,
+        action: editPostAction,
+      },
+      {
+        path: 'dashboard/delete/:postId',
+        action: deletePostAction,
       }
     ]
   }
