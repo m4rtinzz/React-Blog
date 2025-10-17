@@ -15,6 +15,9 @@ import Home from './routes/Home';
 import Blog from './routes/Blog';
 import Post from './routes/Post';
 import AuthorPosts from './routes/AuthorPosts';
+import Login from './routes/Login';
+import Dashboard from './routes/Dashboard';
+import ProtectedRoute from './routes/ProtectedRoute';
 
 // 1. Layout principal da aplicação
 const AppLayout = () => {
@@ -122,6 +125,14 @@ const router = createBrowserRouter([
         path: 'authors/:userId',
         element: <AuthorPosts />,
         loader: authorPostsLoader,
+      },
+      {
+        path: 'login',
+        element: <Login />
+      },
+      {
+        path: 'dashboard',
+        element: <ProtectedRoute><Dashboard /></ProtectedRoute>
       }
     ]
   }
