@@ -1,4 +1,5 @@
 import { Link, Outlet, useLoaderData } from 'react-router-dom';
+import './Blog.css';
 
 interface PostData {
     id: number;
@@ -12,14 +13,13 @@ const Blog = () => {
     return (
         <div>
             <h1>Posts do Blog</h1>
-            <ul>
+            <ul className="posts-list">
                 {posts && posts.map((post) => (
                     <li key={post.id}>
                         <Link to={`/blog/${post.id}`}>{post.title}</Link>
                     </li>
                 ))}
             </ul>
-            <hr />
             <Outlet />
         </div>
     );
